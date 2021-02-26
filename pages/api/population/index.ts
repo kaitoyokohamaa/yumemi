@@ -1,9 +1,9 @@
-import { PrefectureInfo } from "./types";
+import { PopulationInfo } from "./types";
 
-class Prefecutures {
-  FetchPrefecture = async () => {
+class Population {
+  FetchPopulation = async (code: number) => {
     const res = await fetch(
-      "https://opendata.resas-portal.go.jp/api/v1/prefectures",
+      `https://opendata.resas-portal.go.jp/api/v1/population/composition/perYear?prefCode=${code}`,
       {
         method: "GET",
         headers: {
@@ -11,8 +11,8 @@ class Prefecutures {
         },
       }
     );
-    return await res.json().then((item: PrefectureInfo) => item.result);
+    return await res.json().then((item: PopulationInfo) => item.result.data);
   };
 }
 
-export const getPrefectureData = new Prefecutures();
+export const getPopulationData = new Population();
