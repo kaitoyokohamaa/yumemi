@@ -1,15 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Fragment } from "react";
 import { getPrefectureData } from "./api/prefecture";
 import { getPopulationData } from "./api/population";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-} from "recharts";
+import HighchartsReact from "highcharts-react-official";
 
 interface PrefectureInfo {
   prefCode: number;
@@ -20,24 +12,66 @@ type PopulationInfo = {
   value: number;
 };
 
-interface graphTypes {
-  year: number;
-  population: number;
-}
+// interface graphTypes {
+//   year: number;
+//   population: number;
+// }
 
 export default function index() {
   const [prefectures, setPrefectures] = useState<PrefectureInfo[]>([]);
   const [populations, setPopulations] = useState<PopulationInfo[]>([]);
+  const [selectedPopulations, setSelectedPopulations] = useState<number[]>([]);
   const [checkedIds, setCheckedIds] = useState<number[]>([]);
+  const [checkedNames, setCheckedNames] = useState<string[]>([]);
   const [checkedName, setCheckedName] = useState<string>();
-
   const [graphData, setGraphData] = useState<any[]>([]);
 
+  const options = {
+    chart: {
+      type: "spline",
+    },
+    title: {
+      text: "My chart",
+    },
+    xAxis: {
+      categories: [
+        "1960",
+        "1965",
+        "1970",
+        "1975",
+        "1980",
+        "1985",
+        "1990",
+        "1995",
+        "2000",
+        "2005",
+        "2010",
+        "2015",
+        "2020",
+        "2025",
+        "2030",
+        "2035",
+        "2040",
+        "2045",
+      ],
+    },
+    series: [
+      {
+        name: checkedName,
+        data: selectedPopulations,
+      },
+    ],
+  };
   // 都道府県一覧の取得
+  console.log({
+    data: populations,
+  });
   useEffect(() => {
     const fetchPrefecture = async () => {
       const res = getPrefectureData.FetchPrefecture();
-      await res.then((data) => setPrefectures(data));
+      await res.then((data) => {
+        setPrefectures(data);
+      });
     };
     fetchPrefecture();
   }, []);
@@ -45,12 +79,14 @@ export default function index() {
   // チエックリストでチェックした人口を取得
   useEffect(() => {
     const fetchPopulation = async () => {
+      console.log(checkedIds);
       const res = checkedIds?.map(
         async (id: number) => await getPopulationData.FetchPopulation(id)
       );
 
       res?.map(async (item) => {
         await item.then((response) => {
+          console.log(response);
           setPopulations(response[0].data);
         });
       });
@@ -58,20 +94,17 @@ export default function index() {
 
     fetchPopulation();
   }, [checkedIds]);
-
+  console.log(populations);
   useEffect(() => {
-    const data = populations?.map((item) => {
-      if (checkedName) {
-        return {
-          year: item.year,
-          population: item.value,
-          name: checkedName,
-        };
-      }
-    });
-    data && setGraphData(data);
-  }, [checkedIds, populations]);
-  console.log(graphData);
+    let store = [...graphData];
+    const data = populations?.map((item) => item.value);
+    setSelectedPopulations(data);
+    // const data = [];
+    // console.log(store);
+    // store.push(data);
+    setGraphData(store);
+  }, [populations]);
+  console.log(selectedPopulations);
   const handleChange = (
     e: React.FormEvent<HTMLInputElement>,
     prefectureName: string
@@ -81,14 +114,20 @@ export default function index() {
       setCheckedIds([...deleteDuplicateId, Number(e.currentTarget.value)]);
       // checkした県名の取得
       setCheckedName(prefectureName);
+      const deleteDuplicateName = new Set([...checkedNames]);
+      setCheckedNames([...deleteDuplicateName, prefectureName]);
     } else if ((e.target as HTMLInputElement).checked === false) {
       const removedId = Number(e.currentTarget.value);
       const newIds = checkedIds.filter((value) => {
         return value !== removedId;
       });
       setCheckedIds(newIds);
-      // checkした県名を外す
+      // checkした県名を外す TODO:filterで自分がチェックを外した県名を外す
       setCheckedName("");
+      const newNames = checkedNames.filter((value) => {
+        return value !== prefectureName;
+      });
+      setCheckedNames(newNames);
     }
   };
 
@@ -112,32 +151,7 @@ export default function index() {
         })}
       </div>
       <div className="w-9/12 m-auto mt-28">
-        <LineChart
-          width={1000}
-          height={300}
-          margin={{
-            top: 5,
-            right: 30,
-            left: 20,
-            bottom: 5,
-          }}
-        >
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="year" />
-          <YAxis />
-          <Tooltip />
-          <Legend />
-          <Line
-            data={graphData}
-            type="monotone"
-            name={graphData[0]?.name}
-            dataKey="population"
-            stroke="#8884d8"
-            layout="vertical"
-            activeDot={{ r: 8 }}
-          />
-          {/* <Line type="monotone" dataKey="population" stroke="#82ca9d" /> */}
-        </LineChart>
+        <HighchartsReact constructorType={"chart"} options={options} />
       </div>
     </div>
   );
