@@ -12,26 +12,24 @@ type PopulationInfo = {
   value: number;
 };
 
-// interface graphTypes {
-//   year: number;
-//   population: number;
-// }
-
 export default function index() {
   const [prefectures, setPrefectures] = useState<PrefectureInfo[]>([]);
   const [populations, setPopulations] = useState<PopulationInfo[]>([]);
-  const [selectedPopulations, setSelectedPopulations] = useState<number[]>([]);
+  // const [selectedPopulations, setSelectedPopulations] = useState<number[]>([]);
   const [checkedIds, setCheckedIds] = useState<number[]>([]);
+  const [checkedId, setCheckedId] = useState<number>();
   const [checkedNames, setCheckedNames] = useState<string[]>([]);
   const [checkedName, setCheckedName] = useState<string>();
-  const [graphData, setGraphData] = useState<any[]>([]);
+  const [graphData, setGraphData] = useState<
+    { data: number[]; name: string | undefined }[]
+  >([]);
 
   const options = {
     chart: {
       type: "spline",
     },
     title: {
-      text: "My chart",
+      text: "人口グラフ",
     },
     xAxis: {
       categories: [
@@ -55,20 +53,13 @@ export default function index() {
         "2045",
       ],
     },
-    series: [
-      {
-        name: checkedName,
-        data: selectedPopulations,
-      },
-    ],
+    series: graphData && graphData.slice(1, 42),
   };
-  // 都道府県一覧の取得
-  console.log({
-    data: populations,
-  });
+
   useEffect(() => {
     const fetchPrefecture = async () => {
       const res = getPrefectureData.FetchPrefecture();
+
       await res.then((data) => {
         setPrefectures(data);
       });
@@ -76,35 +67,24 @@ export default function index() {
     fetchPrefecture();
   }, []);
 
-  // チエックリストでチェックした人口を取得
   useEffect(() => {
     const fetchPopulation = async () => {
-      console.log(checkedIds);
-      const res = checkedIds?.map(
-        async (id: number) => await getPopulationData.FetchPopulation(id)
-      );
+      if (checkedId) {
+        const res = await getPopulationData.FetchPopulation(checkedId);
 
-      res?.map(async (item) => {
-        await item.then((response) => {
-          console.log(response);
-          setPopulations(response[0].data);
-        });
-      });
+        setPopulations(res[0].data);
+      }
     };
-
     fetchPopulation();
   }, [checkedIds]);
-  console.log(populations);
+
   useEffect(() => {
-    let store = [...graphData];
-    const data = populations?.map((item) => item.value);
-    setSelectedPopulations(data);
-    // const data = [];
-    // console.log(store);
-    // store.push(data);
-    setGraphData(store);
+    const data = populations?.map((item) => {
+      return item.value;
+    });
+    setGraphData([...new Set(graphData), { data, name: checkedName }]);
   }, [populations]);
-  console.log(selectedPopulations);
+
   const handleChange = (
     e: React.FormEvent<HTMLInputElement>,
     prefectureName: string
@@ -114,6 +94,7 @@ export default function index() {
       setCheckedIds([...deleteDuplicateId, Number(e.currentTarget.value)]);
       // checkした県名の取得
       setCheckedName(prefectureName);
+      setCheckedId(Number(e.currentTarget.value));
       const deleteDuplicateName = new Set([...checkedNames]);
       setCheckedNames([...deleteDuplicateName, prefectureName]);
     } else if ((e.target as HTMLInputElement).checked === false) {
@@ -121,15 +102,19 @@ export default function index() {
       const newIds = checkedIds.filter((value) => {
         return value !== removedId;
       });
+
       setCheckedIds(newIds);
+
       // checkした県名を外す TODO:filterで自分がチェックを外した県名を外す
       setCheckedName("");
       const newNames = checkedNames.filter((value) => {
         return value !== prefectureName;
       });
       setCheckedNames(newNames);
+      setCheckedId(0);
     }
   };
+  // console.log(graphData);
 
   return (
     <div className="mt-10">
