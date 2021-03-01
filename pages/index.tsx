@@ -1,4 +1,4 @@
-import React, { useEffect, useState, Fragment } from "react";
+import React, { useEffect, useState } from "react";
 import { getPrefectureData } from "./api/prefecture";
 import { getPopulationData } from "./api/population";
 import HighchartsReact from "highcharts-react-official";
@@ -7,23 +7,28 @@ interface PrefectureInfo {
   prefCode: number;
   prefName: string;
 }
-type PopulationInfo = {
-  year: number;
-  value: number;
-};
 
 export default function index() {
   const [prefectures, setPrefectures] = useState<PrefectureInfo[]>([]);
-  const [populations, setPopulations] = useState<PopulationInfo[]>([]);
-  // const [selectedPopulations, setSelectedPopulations] = useState<number[]>([]);
-  const [checkedIds, setCheckedIds] = useState<number[]>([]);
-  const [checkedId, setCheckedId] = useState<number>();
-  const [checkedNames, setCheckedNames] = useState<string[]>([]);
-  const [checkedName, setCheckedName] = useState<string>();
-  const [graphData, setGraphData] = useState<
-    { data: number[]; name: string | undefined }[]
-  >([]);
+  const [checkedPrefCodes, setCheckedPrefCodes] = useState<number[]>([]);
+  const [selectedPopulations, setSelectedPopulations] = useState(
+    new Map<number, number[]>()
+  );
 
+  const graphData: { name: string; data: number[] }[] = checkedPrefCodes
+    .map((code) => prefectures.find((pref) => pref.prefCode === code))
+    .filter((pref) => pref && selectedPopulations.has(pref.prefCode))
+    .map(
+      (pref) => (
+        console.log(pref!.prefName),
+        console.log(selectedPopulations.get(pref!.prefCode)!),
+        {
+          name: pref!.prefName,
+          data: [...selectedPopulations.get(pref!.prefCode)!],
+        }
+      )
+    );
+  console.log(graphData);
   const options = {
     chart: {
       type: "spline",
@@ -53,69 +58,38 @@ export default function index() {
         "2045",
       ],
     },
-    series: graphData && graphData.slice(1, 42),
+    series: graphData,
   };
 
   useEffect(() => {
-    const fetchPrefecture = async () => {
-      const res = getPrefectureData.FetchPrefecture();
-
-      await res.then((data) => {
-        setPrefectures(data);
-      });
-    };
-    fetchPrefecture();
+    getPrefectureData.FetchPrefecture().then((res) => setPrefectures(res));
   }, []);
-
-  useEffect(() => {
-    const fetchPopulation = async () => {
-      if (checkedId) {
-        const res = await getPopulationData.FetchPopulation(checkedId);
-
-        setPopulations(res[0].data);
-      }
-    };
-    fetchPopulation();
-  }, [checkedIds]);
-
-  useEffect(() => {
-    const data = populations?.map((item) => {
-      return item.value;
-    });
-    setGraphData([...new Set(graphData), { data, name: checkedName }]);
-  }, [populations]);
 
   const handleChange = (
     e: React.FormEvent<HTMLInputElement>,
-    prefectureName: string
+    prefCode: number
   ) => {
     if ((e.target as HTMLInputElement).checked === true) {
-      const deleteDuplicateId = new Set([...checkedIds]);
-      setCheckedIds([...deleteDuplicateId, Number(e.currentTarget.value)]);
-      // checkした県名の取得
-      setCheckedName(prefectureName);
-      setCheckedId(Number(e.currentTarget.value));
-      const deleteDuplicateName = new Set([...checkedNames]);
-      setCheckedNames([...deleteDuplicateName, prefectureName]);
-    } else if ((e.target as HTMLInputElement).checked === false) {
-      const removedId = Number(e.currentTarget.value);
-      const newIds = checkedIds.filter((value) => {
-        return value !== removedId;
-      });
+      const deleteDuplicateId = new Set([...checkedPrefCodes]);
+      setCheckedPrefCodes([...deleteDuplicateId, prefCode]);
 
-      setCheckedIds(newIds);
+      getPopulationData.FetchPopulation(prefCode).then((res) => {
+        setSelectedPopulations((oldData) => {
+          const newData = new Map(oldData);
 
-      // checkした県名を外す TODO:filterで自分がチェックを外した県名を外す
-      setCheckedName("");
-      const newNames = checkedNames.filter((value) => {
-        return value !== prefectureName;
+          newData.set(
+            prefCode,
+            res[0].data.map((item) => item.value)
+          );
+
+          return newData;
+        });
       });
-      setCheckedNames(newNames);
-      setCheckedId(0);
+    } else {
+      setCheckedPrefCodes(checkedPrefCodes.filter((code) => code !== prefCode));
     }
   };
-  // console.log(graphData);
-
+  console.log(selectedPopulations);
   return (
     <div className="mt-10">
       <h1 className="w-9/12 m-auto">
@@ -128,7 +102,7 @@ export default function index() {
               <input
                 type="checkbox"
                 value={item.prefCode}
-                onChange={(e) => handleChange(e, item.prefName)}
+                onChange={(e) => handleChange(e, item.prefCode)}
               />
               <div>{item.prefName}</div>
             </label>

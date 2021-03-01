@@ -11,7 +11,7 @@ class Population {
         },
       }
     );
-    return await res.json().then((item: PopulationInfo) => item.result.data);
+    return await res.json().then((item: PopulationInfo) => item.result?.data);
   };
 }
 
