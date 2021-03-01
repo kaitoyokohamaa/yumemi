@@ -18,17 +18,11 @@ export default function index() {
   const graphData: { name: string; data: number[] }[] = checkedPrefCodes
     .map((code) => prefectures.find((pref) => pref.prefCode === code))
     .filter((pref) => pref && selectedPopulations.has(pref.prefCode))
-    .map(
-      (pref) => (
-        console.log(pref!.prefName),
-        console.log(selectedPopulations.get(pref!.prefCode)!),
-        {
-          name: pref!.prefName,
-          data: [...selectedPopulations.get(pref!.prefCode)!],
-        }
-      )
-    );
-  console.log(graphData);
+    .map((pref) => ({
+      name: pref!.prefName,
+      data: [...selectedPopulations.get(pref!.prefCode)!],
+    }));
+
   const options = {
     chart: {
       type: "spline",
