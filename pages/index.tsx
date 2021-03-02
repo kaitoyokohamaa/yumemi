@@ -1,28 +1,10 @@
-import React, { useEffect, useState } from "react";
-import { getPrefectureData } from "./api/prefecture";
-import { getPopulationData } from "./api/population";
-import HighchartsReact from "highcharts-react-official";
+import React from "react";
 
-interface PrefectureInfo {
-  prefCode: number;
-  prefName: string;
-}
+import HighchartsReact from "highcharts-react-official";
+import { UseGraphData } from "../hooks/useGraphData/useGraphData";
 
 export default function index() {
-  const [prefectures, setPrefectures] = useState<PrefectureInfo[]>([]);
-  const [checkedPrefCodes, setCheckedPrefCodes] = useState<number[]>([]);
-  const [selectedPopulations, setSelectedPopulations] = useState(
-    new Map<number, number[]>()
-  );
-
-  const graphData: { name: string; data: number[] }[] = checkedPrefCodes
-    .map((code) => prefectures.find((pref) => pref.prefCode === code))
-    .filter((pref) => pref && selectedPopulations.has(pref.prefCode))
-    .map((pref) => ({
-      name: pref!.prefName,
-      data: [...selectedPopulations.get(pref!.prefCode)!],
-    }));
-
+  const { handleChange, prefectures, graphData } = UseGraphData();
   const options = {
     chart: {
       type: "spline",
@@ -55,38 +37,9 @@ export default function index() {
     series: graphData,
   };
 
-  useEffect(() => {
-    getPrefectureData.FetchPrefecture().then((res) => setPrefectures(res));
-  }, []);
-
-  const handleChange = (
-    e: React.FormEvent<HTMLInputElement>,
-    prefCode: number
-  ) => {
-    if ((e.target as HTMLInputElement).checked === true) {
-      const deleteDuplicateId = new Set([...checkedPrefCodes]);
-      setCheckedPrefCodes([...deleteDuplicateId, prefCode]);
-
-      getPopulationData.FetchPopulation(prefCode).then((res) => {
-        setSelectedPopulations((oldData) => {
-          const newData = new Map(oldData);
-
-          newData.set(
-            prefCode,
-            res[0].data.map((item) => item.value)
-          );
-
-          return newData;
-        });
-      });
-    } else {
-      setCheckedPrefCodes(checkedPrefCodes.filter((code) => code !== prefCode));
-    }
-  };
-  console.log(selectedPopulations);
   return (
     <div className="mt-10">
-      <h1 className="w-9/12 m-auto">
+      <h1 className="w-9/12 m-auto ">
         <span className="border-2 border-black">都道府県</span>
       </h1>
       <div className="flex  flex-wrap w-9/12 m-auto">
@@ -103,7 +56,7 @@ export default function index() {
           );
         })}
       </div>
-      <div className="w-9/12 m-auto mt-28">
+      <div className="md:w-9/12 m-auto mt-28 sm:w-full">
         <HighchartsReact constructorType={"chart"} options={options} />
       </div>
     </div>
