@@ -20,10 +20,7 @@
     "scripts": {
         "dev": "next -p 3001",
         "build": "next build",
-        "start": "next start",
-        "lint": "eslint . --ext .ts,.js,.tsx,.jsx",
-        "lint:fix": "npm lint --fix",
-        "prettier:quick": "pretty-quick --staged"
+        "start": "next start"
     },
     "eslintConfig": {
         "extends": [
